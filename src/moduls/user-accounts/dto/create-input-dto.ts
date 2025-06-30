@@ -1,0 +1,25 @@
+export class CreateUserInputDto {
+  login: string;
+  email: string;
+  password: string;
+}
+
+export class LoginDto {
+  loginOrEmail: string;
+  password: string;
+}
+
+import { IsString, Length, IsEmail } from 'class-validator';
+
+export class CreateUserDto {
+  @IsString()
+  @Length(3, 10)
+  login: string;
+
+  @IsString()
+  @Length(6, 20)
+  password: string;
+
+  @IsEmail()
+  email: string;
+}
