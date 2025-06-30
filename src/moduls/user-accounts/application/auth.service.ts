@@ -75,9 +75,12 @@ export class AuthService {
     userAgent: string,
     response: Response,
   ): Promise<{ accessToken: string }> {
+    console.log(dto.loginOrEmail, 'input loginOrEmail');
+
     const user = await this.usersRepository.findByLoginOrEmail(
       dto.loginOrEmail,
     );
+    console.log(user, 'user from login');
     if (!user || user.deletion_status !== 'active') {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -107,7 +110,7 @@ export class AuthService {
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
-      maxAge: 20 * 1000, // 20 секунд — ты скорее всего потом увеличишь
+      maxAge: 20 * 1000,
     });
 
     return { accessToken };
