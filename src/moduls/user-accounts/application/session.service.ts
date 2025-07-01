@@ -53,12 +53,11 @@ export class SessionService {
   }
 
   async findAllSessionsForUser(userId: string) {
-    const rows = await this.dataSource.query(
+    return await this.dataSource.query(
       `SELECT device_id AS "deviceId", ip, title, last_active_date AS "lastActiveDate"
        FROM sessions WHERE user_id = $1`,
       [userId],
     );
-    return rows;
   }
 
   async deleteAllOtherSessions(userId: string, currentDeviceId: string) {
