@@ -58,14 +58,14 @@ export class AuthService {
   private generateAccessToken(userId: string, login: string): string {
     return this.jwtService.sign(
       { userId, login },
-      { secret: 'ACCESS_SECRET', expiresIn: '10s' },
+      { secret: 'ACCESS_SECRET', expiresIn: '350s' },
     );
   }
 
   private generateRefreshToken(userId: string, deviceId: string): string {
     return this.jwtService.sign(
       { userId, deviceId },
-      { secret: 'REFRESH_SECRET', expiresIn: '20s' },
+      { secret: 'REFRESH_SECRET', expiresIn: '350s' },
     );
   }
 

@@ -46,7 +46,7 @@ export class PostsPublicController {
   async createComment(
     @Param('postId') postId: string,
     @Body() dto: CreateCommentDto,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @CurrentUser('login') userLogin: string,
   ): Promise<CommentOutputType> {
     return this.commentsService.createComment(postId, userId, userLogin, dto);

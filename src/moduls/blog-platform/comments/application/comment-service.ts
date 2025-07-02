@@ -16,30 +16,35 @@ export class CommentService {
     userLogin: string,
     dto: CreateCommentDto,
   ): Promise<CommentOutputType> {
-    const post = await this.postsService.getPostById(postId);
-    if (!post) throw new NotFoundException('Post not found');
+    try {
+      const post = await this.postsService.getPostById(postId);
+      if (!post) throw new NotFoundException('Post not found');
 
-    const comment = await this.commentsRepository.create({
-      content: dto.content,
-      postId,
-      userId,
-      userLogin,
-    });
-
-    return {
-      id: comment.id,
-      content: comment.content,
-      commentatorInfo: {
+      const comment = await this.commentsRepository.create({
+        content: dto.content,
+        postId,
         userId,
         userLogin,
-      },
-      createdAt: comment.created_at.toISOString(),
-      likesInfo: {
-        likesCount: 0,
-        dislikesCount: 0,
-        myStatus: 'None',
-      },
-    };
+      });
+
+      return {
+        id: comment.id,
+        content: comment.content,
+        commentatorInfo: {
+          userId,
+          userLogin,
+        },
+        createdAt: comment.created_at.toISOString(),
+        likesInfo: {
+          likesCount: 0,
+          dislikesCount: 0,
+          myStatus: 'None',
+        },
+      };
+    } catch (err) {
+      console.error('🔥 Ошибка при создании комментария:', err);
+      throw err;
+    }
   }
 
   async getCommentById(
