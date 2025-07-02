@@ -1,0 +1,75 @@
+import { CommentRepository } from '../infrastructure/comment-repository';
+import { CommentOutputType, CreateCommentDto } from '../dto/create-comment-dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PostsService } from '../../posts/application/posts.service';
+
+@Injectable()
+export class CommentService {
+  constructor(
+    private readonly commentsRepository: CommentRepository,
+    private readonly postsService: PostsService,
+  ) {}
+
+  async createComment(
+    postId: string,
+    userId: string,
+    userLogin: string,
+    dto: CreateCommentDto,
+  ): Promise<CommentOutputType> {
+    const post = await this.postsService.getPostById(postId);
+    if (!post) throw new NotFoundException('Post not found');
+
+    const comment = await this.commentsRepository.create({
+      content: dto.content,
+      postId,
+      userId,
+      userLogin,
+    });
+
+    return {
+      id: comment.id,
+      content: comment.content,
+      commentatorInfo: {
+        userId,
+        userLogin,
+      },
+      createdAt: comment.created_at.toISOString(),
+      likesInfo: {
+        likesCount: 0,
+        dislikesCount: 0,
+        myStatus: 'None',
+      },
+    };
+  }
+
+  async getCommentById(
+    commentId: string,
+    currentUserId: string,
+  ): Promise<CommentOutputType> {
+    const comment = await this.commentsRepository.findById(commentId);
+    if (!comment) throw new NotFoundException();
+
+    // Посчитать myStatus
+    const like = await this.commentsRepository.findUserReaction(
+      commentId,
+      currentUserId,
+      'Comment',
+    );
+    const myStatus = like?.status || 'None';
+
+    return {
+      id: comment.id,
+      content: comment.content,
+      commentatorInfo: {
+        userId: comment.user_id,
+        userLogin: comment.user_login,
+      },
+      createdAt: comment.created_at.toISOString(),
+      likesInfo: {
+        likesCount: comment.likes_count,
+        dislikesCount: comment.dislikes_count,
+        myStatus,
+      },
+    };
+  }
+}
