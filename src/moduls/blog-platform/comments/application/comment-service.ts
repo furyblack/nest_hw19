@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PostsService } from '../../posts/application/posts.service';
+import { GetCommentsQueryDto } from '../dto/getCommentsDto';
+import { Pagination } from '../../posts/dto/pagination.dto';
 
 @Injectable()
 export class CommentService {
@@ -109,5 +111,20 @@ export class CommentService {
     }
 
     await this.commentsRepository.delete(commentId);
+  }
+
+  async getCommentsForPost(
+    postId: string,
+    query: GetCommentsQueryDto,
+    currentUserId: string,
+  ): Promise<Pagination<CommentOutputType>> {
+    const post = await this.postsService.getPostById(postId);
+    if (!post) throw new NotFoundException('Post not found');
+
+    return this.commentsRepository.getCommentsForPost(
+      postId,
+      query,
+      currentUserId,
+    );
   }
 }
