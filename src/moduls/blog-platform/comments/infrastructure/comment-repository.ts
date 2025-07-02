@@ -42,4 +42,17 @@ export class CommentRepository {
     );
     return result[0] || null;
   }
+
+  async updateContent(commentId: string, content: string) {
+    await this.dataSource.query(
+      `UPDATE comments SET content = $1 WHERE id = $2`,
+      [content, commentId],
+    );
+  }
+  async delete(commentId: string): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE comments SET deletion_status = 'deleted' WHERE id = $1`,
+      [commentId],
+    );
+  }
 }

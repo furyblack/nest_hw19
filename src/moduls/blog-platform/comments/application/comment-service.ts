@@ -1,6 +1,10 @@
 import { CommentRepository } from '../infrastructure/comment-repository';
 import { CommentOutputType, CreateCommentDto } from '../dto/create-comment-dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PostsService } from '../../posts/application/posts.service';
 
 @Injectable()
@@ -76,5 +80,34 @@ export class CommentService {
         myStatus,
       },
     };
+  }
+
+  async updateComment(
+    commentId: string,
+    content: string,
+    userId: string,
+  ): Promise<void> {
+    const comment = await this.commentsRepository.findById(commentId);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.user_id !== userId) {
+      throw new ForbiddenException('You are not the owner of this comment');
+    }
+
+    await this.commentsRepository.updateContent(commentId, content);
+  }
+  async deleteComment(commentId: string, userId: string): Promise<void> {
+    const comment = await this.commentsRepository.findById(commentId);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.user_id !== userId) {
+      throw new ForbiddenException('You are not the owner of this comment');
+    }
+
+    await this.commentsRepository.delete(commentId);
   }
 }

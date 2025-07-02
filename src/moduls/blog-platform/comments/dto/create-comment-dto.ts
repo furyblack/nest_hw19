@@ -23,3 +23,9 @@ export class CommentOutputType {
   createdAt: string; // ISO string
   likesInfo: LikesInfo;
 }
+
+export class UpdateCommentDto {
+  @IsString()
+  @Length(20, 300)
+  content: string;
+}
