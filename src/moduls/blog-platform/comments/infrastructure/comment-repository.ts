@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { GetCommentsQueryDto } from '../dto/getCommentsDto';
+import { LikeStatusEnum } from '../../posts/dto/like-status.dto';
 
 @Injectable()
 export class CommentRepository {
@@ -136,5 +137,36 @@ export class CommentRepository {
       totalCount,
       items,
     };
+  }
+
+  async updateLikeForComment(
+    commentId: string,
+    userId: string,
+    status: LikeStatusEnum,
+  ): Promise<void> {
+    if (status === LikeStatusEnum.None) {
+      await this.dataSource.query(
+        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Comment'`,
+        [userId, commentId],
+      );
+      return;
+    }
+
+    const existing = await this.dataSource.query(
+      `SELECT * FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Comment'`,
+      [userId, commentId],
+    );
+
+    if (existing.length > 0) {
+      await this.dataSource.query(
+        `UPDATE likes SET status = $1 WHERE user_id = $2 AND entity_id = $3 AND entity_type = 'Comment'`,
+        [status, userId, commentId],
+      );
+    } else {
+      await this.dataSource.query(
+        `INSERT INTO likes (user_id, entity_id, entity_type, status) VALUES ($1, $2, 'Comment', $3)`,
+        [userId, commentId, status],
+      );
+    }
   }
 }

@@ -13,6 +13,7 @@ import { CurrentUser } from '../../../user-accounts/decarators/current-user';
 import { CommentOutputType, UpdateCommentDto } from '../dto/create-comment-dto';
 import { CommentService } from '../application/comment-service';
 import { JwtAuthGuard } from '../../../user-accounts/guards/bearer/jwt-auth.guard';
+import { LikeStatusDto } from '../../posts/dto/like-status.dto';
 
 @Controller('comments')
 export class CommentController {
@@ -48,5 +49,16 @@ export class CommentController {
     @CurrentUser('userId') userId: string,
   ) {
     await this.commentsService.deleteComment(commentId, userId);
+  }
+
+  @Put(':commentId/like-status')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async likeComment(
+    @Param('commentId') commentId: string,
+    @Body() dto: LikeStatusDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    await this.commentsService.likeComment(commentId, userId, dto.likeStatus);
   }
 }

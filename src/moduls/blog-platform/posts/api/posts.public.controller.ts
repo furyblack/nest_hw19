@@ -9,6 +9,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Put,
 } from '@nestjs/common';
 import { PostsService } from '../application/posts.service';
 import { GetPostsQueryDto } from '../dto/get-posts-query.dto';
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from '../../../user-accounts/guards/bearer/jwt-auth.guar
 import { CurrentUser } from '../../../user-accounts/decarators/current-user';
 import { GetCommentsQueryDto } from '../../comments/dto/getCommentsDto';
 import { JwtOptionalAuthGuard } from '../../../user-accounts/guards/bearer/jwt-optional-guard';
+import { LikeStatusDto } from '../dto/like-status.dto';
 
 @Controller('posts')
 export class PostsPublicController {
@@ -62,5 +64,16 @@ export class PostsPublicController {
   ) {
     console.log('🟡 userId:', userId);
     return this.commentsService.getCommentsForPost(postId, query, userId);
+  }
+
+  @Put(':postId/like-status')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async likePost(
+    @Param('postId') postId: string,
+    @Body() dto: LikeStatusDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    await this.postsService.likePost(postId, userId, dto.likeStatus);
   }
 }

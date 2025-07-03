@@ -7,6 +7,7 @@ import { PostViewDto } from '../dto/posts-view.dto';
 import { Pagination } from '../dto/pagination.dto';
 import { LikeStatus } from '../likes/like.enum';
 import { UpdatePostDto } from '../dto/update.post.dto';
+import { LikeStatusEnum } from '../dto/like-status.dto';
 
 @Injectable()
 export class PostsService {
@@ -77,5 +78,16 @@ export class PostsService {
     if (!isDeleted) {
       throw new NotFoundException(); // <-- проверка здесь
     }
+  }
+
+  async likePost(
+    postId: string,
+    userId: string,
+    likeStatus: LikeStatusEnum,
+  ): Promise<void> {
+    const post = await this.postsRepo.findPostById(postId);
+    if (!post) throw new NotFoundException('Post not found');
+
+    await this.postsRepo.updateLikeForPost(postId, userId, likeStatus);
   }
 }

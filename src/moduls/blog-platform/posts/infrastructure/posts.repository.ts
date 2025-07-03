@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { GetPostsQueryDto } from '../dto/get-posts-query.dto';
 import { LikeStatus } from '../likes/like.enum';
 import { UpdatePostDto } from '../dto/update.post.dto';
+import { LikeStatusEnum } from '../dto/like-status.dto';
 
 @Injectable()
 export class PostsRepository {
@@ -195,5 +196,38 @@ export class PostsRepository {
     );
     const deletedRows = result[0]; // это массив с удалёнными строками
     return deletedRows.length > 0;
+  }
+
+  async updateLikeForPost(
+    postId: string,
+    userId: string,
+    status: LikeStatusEnum,
+  ): Promise<void> {
+    // Удалим лайк, если статус None
+    if (status === LikeStatusEnum.None) {
+      await this.dataSource.query(
+        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Post'`,
+        [userId, postId],
+      );
+      return;
+    }
+
+    // Если лайк уже есть, обновим
+    const existing = await this.dataSource.query(
+      `SELECT * FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Post'`,
+      [userId, postId],
+    );
+
+    if (existing.length > 0) {
+      await this.dataSource.query(
+        `UPDATE likes SET status = $1 WHERE user_id = $2 AND entity_id = $3 AND entity_type = 'Post'`,
+        [status, userId, postId],
+      );
+    } else {
+      await this.dataSource.query(
+        `INSERT INTO likes (user_id, entity_id, entity_type, status) VALUES ($1, $2, 'Post', $3)`,
+        [userId, postId, status],
+      );
+    }
   }
 }

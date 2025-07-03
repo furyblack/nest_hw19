@@ -8,6 +8,7 @@ import {
 import { PostsService } from '../../posts/application/posts.service';
 import { GetCommentsQueryDto } from '../dto/getCommentsDto';
 import { Pagination } from '../../posts/dto/pagination.dto';
+import { LikeStatusEnum } from '../../posts/dto/like-status.dto';
 
 @Injectable()
 export class CommentService {
@@ -125,6 +126,23 @@ export class CommentService {
       postId,
       query,
       currentUserId,
+    );
+  }
+
+  async likeComment(
+    commentId: string,
+    userId: string,
+    likeStatus: LikeStatusEnum,
+  ): Promise<void> {
+    const comment = await this.commentsRepository.findById(commentId);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    await this.commentsRepository.updateLikeForComment(
+      commentId,
+      userId,
+      likeStatus,
     );
   }
 }
