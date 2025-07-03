@@ -38,8 +38,12 @@ export class PostsPublicController {
   }
 
   @Get(':id')
-  async getPostById(@Param('id') id: string): Promise<PostViewDto> {
-    const post = await this.postsService.getPostById(id);
+  @UseGuards(JwtOptionalAuthGuard)
+  async getPostById(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId?: string,
+  ): Promise<PostViewDto> {
+    const post = await this.postsService.getPostById(id, userId);
     if (!post) throw new NotFoundException('Post not found');
     return post;
   }
@@ -73,7 +77,8 @@ export class PostsPublicController {
     @Param('postId') postId: string,
     @Body() dto: LikeStatusDto,
     @CurrentUser('userId') userId: string,
+    @CurrentUser('login') userLogin: string,
   ) {
-    await this.postsService.likePost(postId, userId, dto.likeStatus);
+    await this.postsService.likePost(postId, userId, userLogin, dto.likeStatus);
   }
 }

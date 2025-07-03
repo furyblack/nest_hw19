@@ -136,18 +136,58 @@ export class PostsRepository {
     };
   }
 
-  async findPostById(id: string) {
+  async findPostById(postId: string, currentUserId?: string) {
     const result = await this.dataSource.query(
       `
-    SELECT p.*, b.name as blogName
-    FROM posts p
-    LEFT JOIN blogs b ON p.blog_id = b.id
-    WHERE p.id = $1
-    `,
-      [id],
+          SELECT p.*, b.name as blogName
+          FROM posts p
+                   LEFT JOIN blogs b ON p.blog_id = b.id
+          WHERE p.id = $1
+      `,
+      [postId],
     );
+
     const post = result[0];
     if (!post) return null;
+
+    // 1. Подсчитать лайки и дизлайки
+    const [likesCountResult, dislikesCountResult] = await Promise.all([
+      this.dataSource.query(
+        `SELECT COUNT(*) FROM likes WHERE entity_id = $1 AND entity_type = 'Post' AND status = 'Like'`,
+        [postId],
+      ),
+      this.dataSource.query(
+        `SELECT COUNT(*) FROM likes WHERE entity_id = $1 AND entity_type = 'Post' AND status = 'Dislike'`,
+        [postId],
+      ),
+    ]);
+
+    const likesCount = parseInt(likesCountResult[0].count, 10);
+    const dislikesCount = parseInt(dislikesCountResult[0].count, 10);
+
+    // 2. Получить статус текущего пользователя
+    let myStatus = LikeStatus.None;
+    if (currentUserId) {
+      const statusResult = await this.dataSource.query(
+        `SELECT status FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Post'`,
+        [currentUserId, postId],
+      );
+      if (statusResult[0]) {
+        myStatus = statusResult[0].status;
+      }
+    }
+
+    // 3. Получить 3 последних лайка
+    const newestLikes = await this.dataSource.query(
+      `
+    SELECT user_id AS "userId", user_login AS login, created_at AS "addedAt"
+    FROM likes
+    WHERE entity_id = $1 AND entity_type = 'Post' AND status = 'Like'
+    ORDER BY created_at DESC
+    LIMIT 3
+    `,
+      [postId],
+    );
 
     return {
       id: post.id,
@@ -158,10 +198,10 @@ export class PostsRepository {
       blogName: post.blogname,
       createdAt: post.created_at,
       extendedLikesInfo: {
-        likesCount: 0,
-        dislikesCount: 0,
-        myStatus: LikeStatus.None,
-        newestLikes: [],
+        likesCount,
+        dislikesCount,
+        myStatus,
+        newestLikes,
       },
     };
   }
@@ -201,6 +241,7 @@ export class PostsRepository {
   async updateLikeForPost(
     postId: string,
     userId: string,
+    userLogin: string,
     status: LikeStatusEnum,
   ): Promise<void> {
     // Удалим лайк, если статус None
@@ -225,8 +266,9 @@ export class PostsRepository {
       );
     } else {
       await this.dataSource.query(
-        `INSERT INTO likes (user_id, entity_id, entity_type, status) VALUES ($1, $2, 'Post', $3)`,
-        [userId, postId, status],
+        `INSERT INTO likes (user_id, user_login, entity_id, entity_type, status)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, userLogin, postId, 'Post', status],
       );
     }
   }

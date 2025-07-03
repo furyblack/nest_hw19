@@ -61,8 +61,8 @@ export class PostsService {
     return this.postsRepo.getAllPostsWithPagination(query);
   }
 
-  async getPostById(id: string): Promise<PostViewDto | null> {
-    return this.postsRepo.findPostById(id);
+  async getPostById(id: string, userId?: string): Promise<PostViewDto | null> {
+    return this.postsRepo.findPostById(id, userId);
   }
 
   async updatePost(
@@ -83,11 +83,17 @@ export class PostsService {
   async likePost(
     postId: string,
     userId: string,
+    userLogin: string,
     likeStatus: LikeStatusEnum,
   ): Promise<void> {
     const post = await this.postsRepo.findPostById(postId);
     if (!post) throw new NotFoundException('Post not found');
 
-    await this.postsRepo.updateLikeForPost(postId, userId, likeStatus);
+    await this.postsRepo.updateLikeForPost(
+      postId,
+      userId,
+      userLogin,
+      likeStatus,
+    );
   }
 }
