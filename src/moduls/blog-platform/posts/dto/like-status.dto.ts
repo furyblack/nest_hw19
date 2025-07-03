@@ -5,6 +5,7 @@ export enum LikeStatusEnum {
   Like = 'Like',
   Dislike = 'Dislike',
 }
+export type LikeStatusType = 'Like' | 'Dislike' | 'None';
 
 export class LikeStatusDto {
   @IsEnum(LikeStatusEnum)

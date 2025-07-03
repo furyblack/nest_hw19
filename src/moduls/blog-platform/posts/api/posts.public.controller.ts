@@ -33,8 +33,12 @@ export class PostsPublicController {
   ) {}
 
   @Get()
-  async getAllPosts(@Query() query: GetPostsQueryDto) {
-    return await this.postsService.getAllPosts(query);
+  @UseGuards(JwtOptionalAuthGuard)
+  async getAllPosts(
+    @Query() query: GetPostsQueryDto,
+    @CurrentUser('userId') userId?: string,
+  ) {
+    return this.postsService.getAllPosts(query, userId);
   }
 
   @Get(':id')

@@ -57,8 +57,8 @@ export class PostsService {
     };
   }
 
-  async getAllPosts(query: GetPostsQueryDto) {
-    return this.postsRepo.getAllPostsWithPagination(query);
+  async getAllPosts(query: GetPostsQueryDto, userId?: string) {
+    return this.postsRepo.getAllPostsWithPagination(query, userId);
   }
 
   async getPostById(id: string, userId?: string): Promise<PostViewDto | null> {
