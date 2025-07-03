@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { GetPostsQueryDto } from '../dto/get-posts-query.dto';
 import { LikeStatus } from '../likes/like.enum';
 import { UpdatePostDto } from '../dto/update.post.dto';
-import { LikeStatusEnum, LikeStatusType } from '../dto/like-status.dto';
+import { LikeStatusEnum } from '../dto/like-status.dto';
 
 @Injectable()
 export class PostsRepository {
@@ -223,14 +223,11 @@ export class PostsRepository {
       if (!group) continue;
 
       if (like.status === 'Like') {
-        group.likes.push(like);
-        if (group.newestLikes.length < 3) {
-          group.newestLikes.push({
-            addedAt: new Date(like.created_at).toISOString(),
-            userId: like.user_id,
-            login: like.user_login,
-          });
-        }
+        group.likes.push({
+          addedAt: new Date(like.created_at).toISOString(),
+          userId: like.user_id,
+          login: like.user_login,
+        });
       } else if (like.status === 'Dislike') {
         group.dislikes.push(like);
       }
@@ -252,6 +249,12 @@ export class PostsRepository {
       items: posts.map((p) => {
         const likesData = likesMap.get(p.id)!;
         const myStatus = userId ? userLikesMap.get(p.id) || 'None' : 'None';
+        const newestLikes = likesData.likes
+          .sort(
+            (a, b) =>
+              new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime(),
+          )
+          .slice(0, 3);
 
         return {
           id: p.id,
@@ -265,7 +268,7 @@ export class PostsRepository {
             likesCount: likesData.likes.length,
             dislikesCount: likesData.dislikes.length,
             myStatus: myStatus as 'Like' | 'Dislike' | 'None',
-            newestLikes: likesData.newestLikes,
+            newestLikes,
           },
         };
       }),
