@@ -94,6 +94,22 @@ export class PostsRepository {
       });
     }
 
+    const userLikesMap = new Map<string, string>();
+    if (userId) {
+      const userLikes = await this.dataSource.query(
+        `
+    SELECT entity_id, status
+    FROM likes
+    WHERE user_id = $1 AND entity_type = 'Post' AND entity_id = ANY($2)
+  `,
+        [userId, postIds],
+      );
+
+      userLikes.forEach((like) => {
+        userLikesMap.set(like.entity_id, like.status);
+      });
+    }
+
     for (const like of rawLikes) {
       const group = likesMap.get(like.entity_id);
       if (!group) continue;
@@ -116,13 +132,7 @@ export class PostsRepository {
     const items = posts.map((p: any) => {
       const likesData = likesMap.get(p.id)!;
 
-      let myStatus: 'Like' | 'Dislike' | 'None' = 'None';
-      if (userId) {
-        const found = rawLikes.find(
-          (like) => like.entity_id === p.id && like.user_id === userId,
-        );
-        if (found) myStatus = found.status;
-      }
+      const myStatus = userLikesMap.get(p.id) || 'None';
 
       return {
         id: p.id,
