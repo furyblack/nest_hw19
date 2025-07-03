@@ -21,6 +21,7 @@ import { CommentService } from '../../comments/application/comment-service';
 import { JwtAuthGuard } from '../../../user-accounts/guards/bearer/jwt-auth.guard';
 import { CurrentUser } from '../../../user-accounts/decarators/current-user';
 import { GetCommentsQueryDto } from '../../comments/dto/getCommentsDto';
+import { JwtOptionalAuthGuard } from '../../../user-accounts/guards/bearer/jwt-optional-guard';
 
 @Controller('posts')
 export class PostsPublicController {
@@ -52,12 +53,14 @@ export class PostsPublicController {
   ): Promise<CommentOutputType> {
     return this.commentsService.createComment(postId, userId, userLogin, dto);
   }
-  @Get('/post/:postId/comments')
+  @Get(':postId/comments')
+  @UseGuards(JwtOptionalAuthGuard)
   async getCommentsForPost(
     @Param('postId') postId: string,
     @Query() query: GetCommentsQueryDto,
     @CurrentUser('userId') userId: string,
   ) {
+    console.log('🟡 userId:', userId);
     return this.commentsService.getCommentsForPost(postId, query, userId);
   }
 }
