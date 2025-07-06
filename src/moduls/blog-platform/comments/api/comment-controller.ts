@@ -14,14 +14,16 @@ import { CommentOutputType, UpdateCommentDto } from '../dto/create-comment-dto';
 import { CommentService } from '../application/comment-service';
 import { JwtAuthGuard } from '../../../user-accounts/guards/bearer/jwt-auth.guard';
 import { LikeStatusDto } from '../../posts/dto/like-status.dto';
+import { JwtOptionalAuthGuard } from '../../../user-accounts/guards/bearer/jwt-optional-guard';
 
 @Controller('comments')
 export class CommentController {
   constructor(private readonly commentsService: CommentService) {}
   @Get(':id')
+  @UseGuards(JwtOptionalAuthGuard)
   async getCommentById(
     @Param('id') id: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId?: string,
   ): Promise<CommentOutputType> {
     return this.commentsService.getCommentById(id, userId);
   }
@@ -58,7 +60,13 @@ export class CommentController {
     @Param('commentId') commentId: string,
     @Body() dto: LikeStatusDto,
     @CurrentUser('userId') userId: string,
+    @CurrentUser('login') userLogin: string,
   ) {
-    await this.commentsService.likeComment(commentId, userId, dto.likeStatus);
+    await this.commentsService.likeComment(
+      commentId,
+      userId,
+      userLogin,
+      dto.likeStatus,
+    );
   }
 }

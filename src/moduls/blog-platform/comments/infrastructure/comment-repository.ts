@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { GetCommentsQueryDto } from '../dto/getCommentsDto';
 import { LikeStatusEnum } from '../../posts/dto/like-status.dto';
+import { LikeStatus } from '../../posts/likes/like.enum';
 
 @Injectable()
 export class CommentRepository {
@@ -25,12 +26,59 @@ export class CommentRepository {
     return result[0];
   }
 
-  async findById(id: string): Promise<any | null> {
+  async findById(commentId: string, currentUserId?: string) {
     const result = await this.dataSource.query(
-      `SELECT * FROM comments WHERE id = $1 AND deletion_status = 'active'`,
-      [id],
+      `
+    SELECT * FROM comments
+    WHERE id = $1 AND deletion_status = 'active'
+    `,
+      [commentId],
     );
-    return result[0] || null;
+
+    const comment = result[0];
+    if (!comment) return null;
+
+    // 1. Подсчитать лайки и дизлайки
+    const [likesCountResult, dislikesCountResult] = await Promise.all([
+      this.dataSource.query(
+        `SELECT COUNT(*) FROM likes WHERE entity_id = $1 AND entity_type = 'Comment' AND status = 'Like'`,
+        [commentId],
+      ),
+      this.dataSource.query(
+        `SELECT COUNT(*) FROM likes WHERE entity_id = $1 AND entity_type = 'Comment' AND status = 'Dislike'`,
+        [commentId],
+      ),
+    ]);
+
+    const likesCount = parseInt(likesCountResult[0].count, 10);
+    const dislikesCount = parseInt(dislikesCountResult[0].count, 10);
+
+    // 2. Получить статус текущего пользователя
+    let myStatus = LikeStatus.None;
+    if (currentUserId) {
+      const statusResult = await this.dataSource.query(
+        `SELECT status FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Comment'`,
+        [currentUserId, commentId],
+      );
+      if (statusResult[0]) {
+        myStatus = statusResult[0].status;
+      }
+    }
+
+    return {
+      id: comment.id,
+      content: comment.content,
+      commentatorInfo: {
+        userId: comment.user_id,
+        userLogin: comment.user_login,
+      },
+      createdAt: comment.created_at.toISOString(),
+      likesInfo: {
+        likesCount,
+        dislikesCount,
+        myStatus,
+      },
+    };
   }
 
   async findUserReaction(
@@ -142,11 +190,15 @@ export class CommentRepository {
   async updateLikeForComment(
     commentId: string,
     userId: string,
+    userLogin: string,
     status: LikeStatusEnum,
   ): Promise<void> {
-    if (status === LikeStatusEnum.None) {
+    const normalizedStatus =
+      status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
+    if (normalizedStatus === 'None') {
       await this.dataSource.query(
-        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Comment'`,
+        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Post'`,
         [userId, commentId],
       );
       return;
@@ -160,12 +212,12 @@ export class CommentRepository {
     if (existing.length > 0) {
       await this.dataSource.query(
         `UPDATE likes SET status = $1 WHERE user_id = $2 AND entity_id = $3 AND entity_type = 'Comment'`,
-        [status, userId, commentId],
+        [normalizedStatus, userId, commentId],
       );
     } else {
       await this.dataSource.query(
-        `INSERT INTO likes (user_id, entity_id, entity_type, status) VALUES ($1, $2, 'Comment', $3)`,
-        [userId, commentId, status],
+        `INSERT INTO likes (user_id, user_login, entity_id, entity_type, status) VALUES ($1, $2, $3, $4,$5)`,
+        [userId, userLogin, commentId, 'Comment', normalizedStatus],
       );
     }
   }

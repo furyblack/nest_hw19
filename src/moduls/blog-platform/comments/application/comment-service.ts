@@ -53,36 +53,20 @@ export class CommentService {
       throw err;
     }
   }
+  // async getPostById(id: string, userId?: string): Promise<PostViewDto | null> {
+  //   return this.commentsRepository.findById(id, userId);
+  // }
 
   async getCommentById(
     commentId: string,
-    currentUserId: string,
+    currentUserId?: string,
   ): Promise<CommentOutputType> {
-    const comment = await this.commentsRepository.findById(commentId);
-    if (!comment) throw new NotFoundException();
-
-    // Посчитать myStatus
-    const like = await this.commentsRepository.findUserReaction(
+    const comment = await this.commentsRepository.findById(
       commentId,
       currentUserId,
-      'Comment',
     );
-    const myStatus = like?.status || 'None';
-
-    return {
-      id: comment.id,
-      content: comment.content,
-      commentatorInfo: {
-        userId: comment.user_id,
-        userLogin: comment.user_login,
-      },
-      createdAt: comment.created_at.toISOString(),
-      likesInfo: {
-        likesCount: comment.likes_count,
-        dislikesCount: comment.dislikes_count,
-        myStatus,
-      },
-    };
+    if (!comment) throw new NotFoundException('Comment not found');
+    return comment;
   }
 
   async updateComment(
@@ -95,23 +79,11 @@ export class CommentService {
       throw new NotFoundException('Comment not found');
     }
 
-    if (comment.user_id !== userId) {
+    if (comment.commentatorInfo.userId !== userId) {
       throw new ForbiddenException('You are not the owner of this comment');
     }
 
     await this.commentsRepository.updateContent(commentId, content);
-  }
-  async deleteComment(commentId: string, userId: string): Promise<void> {
-    const comment = await this.commentsRepository.findById(commentId);
-    if (!comment) {
-      throw new NotFoundException('Comment not found');
-    }
-
-    if (comment.user_id !== userId) {
-      throw new ForbiddenException('You are not the owner of this comment');
-    }
-
-    await this.commentsRepository.delete(commentId);
   }
 
   async getCommentsForPost(
@@ -129,9 +101,23 @@ export class CommentService {
     );
   }
 
+  async deleteComment(commentId: string, userId: string): Promise<void> {
+    const comment = await this.commentsRepository.findById(commentId);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.commentatorInfo.userId !== userId) {
+      throw new ForbiddenException('You are not the owner of this comment');
+    }
+
+    await this.commentsRepository.delete(commentId);
+  }
+
   async likeComment(
     commentId: string,
     userId: string,
+    userLogin: string,
     likeStatus: LikeStatusEnum,
   ): Promise<void> {
     const comment = await this.commentsRepository.findById(commentId);
@@ -142,6 +128,7 @@ export class CommentService {
     await this.commentsRepository.updateLikeForComment(
       commentId,
       userId,
+      userLogin,
       likeStatus,
     );
   }
