@@ -126,14 +126,25 @@ export class CommentRepository {
     const sortDirection =
       query.sortDirection?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    // ✅ SQL-запрос
+    // 🔄 Основной запрос: достаем комментарии с агрегацией лайков/дизлайков
     const comments = await this.dataSource.query(
       `
-    SELECT * FROM comments
-    WHERE post_id = $1 AND deletion_status = 'active'
-    ORDER BY ${sortBy} ${sortDirection}
-    LIMIT $2 OFFSET $3
-    `,
+          SELECT
+              c.id,
+              c.content,
+              c.user_id,
+              c.user_login,
+              c.created_at,
+              COALESCE(SUM(CASE WHEN l.status = 'Like' THEN 1 ELSE 0 END), 0) AS likes_count,
+              COALESCE(SUM(CASE WHEN l.status = 'Dislike' THEN 1 ELSE 0 END), 0) AS dislikes_count
+          FROM comments c
+                   LEFT JOIN likes l
+                             ON c.id = l.entity_id AND l.entity_type = 'Comment'
+          WHERE c.post_id = $1 AND c.deletion_status = 'active'
+          GROUP BY c.id
+          ORDER BY ${sortBy} ${sortDirection}
+          LIMIT $2 OFFSET $3
+      `,
       [postId, pageSize, skip],
     );
 
@@ -170,8 +181,8 @@ export class CommentRepository {
           },
           createdAt: c.created_at,
           likesInfo: {
-            likesCount: c.likes_count || 0,
-            dislikesCount: c.dislikes_count || 0,
+            likesCount: Number(c.likes_count || 0),
+            dislikesCount: Number(c.dislikes_count || 0),
             myStatus,
           },
         };
@@ -198,7 +209,7 @@ export class CommentRepository {
 
     if (normalizedStatus === 'None') {
       await this.dataSource.query(
-        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Post'`,
+        `DELETE FROM likes WHERE user_id = $1 AND entity_id = $2 AND entity_type = 'Comment'`,
         [userId, commentId],
       );
       return;
